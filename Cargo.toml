@@ -1,0 +1,58 @@
+[package]
+name = "blinc_canvas_kit"
+version = "0.5.1"
+edition = "2021"
+license = "Apache-2.0"
+description = "Canvas authoring toolkit: interactive scene graphs (pan, zoom, selection, grid), 3D scene kit, and p5.js-style immediate-mode sketching over Blinc's DrawContext"
+repository = "https://github.com/project-blinc/blinc_canvas_kit"
+readme = "README.md"
+documentation = "https://docs.rs/blinc_canvas_kit"
+rust-version = "1.75"
+keywords = ["ui", "gui", "canvas", "editor", "node-graph"]
+categories = ["gui", "game-development"]
+
+# Standalone package — not a member of the Blinc workspace. Lives under
+# `/packages/` which is gitignored and workspace-excluded. Mirrors the
+# `blinc_gltf` / `blinc_skeleton` / `blinc_input` pattern: pinned `git`
+# deps on the Blinc upstream that consumers can override via a
+# workspace `[patch]` table when developing against a local Blinc
+# checkout. Bump these revs in lockstep with the Blinc repo's `main`.
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+# Pinned `git` deps on the Blinc upstream. Cargo doesn't allow `path`
+# alongside `git` in the same entry, so consumers wanting to develop
+# this crate against a local Blinc checkout should add a `[patch]`
+# table in their workspace `Cargo.toml`:
+#
+#     [patch."https://github.com/project-blinc/Blinc.git"]
+#     blinc_core = { path = "crates/blinc_core" }
+#     blinc_layout = { path = "crates/blinc_layout" }
+#     blinc_gpu = { path = "crates/blinc_gpu" }
+#
+# The Blinc workspace itself does this in its root Cargo.toml.
+blinc_core = { git = "https://github.com/project-blinc/Blinc.git", rev = "44d08036483be514ee64335aa936ef76e8d48bf2" }
+blinc_layout = { git = "https://github.com/project-blinc/Blinc.git", rev = "44d08036483be514ee64335aa936ef76e8d48bf2" }
+blinc_gpu = { git = "https://github.com/project-blinc/Blinc.git", rev = "44d08036483be514ee64335aa936ef76e8d48bf2" }
+
+# Downstream input polling layer. Used by `SceneKit3D::with_input` to
+# automate the `capture_input` + per-frame `frame_end` wiring that
+# every 3D demo reimplements. Same workspace-`[patch]` pattern as the
+# Blinc internals above.
+blinc_input = { git = "https://github.com/project-blinc/blinc_input.git", rev = "3e94941bd59bafcd23ad59e8db504a44fa85b4f5" }
+
+# Versions inlined (no workspace inheritance — this crate isn't a
+# Blinc workspace member). Keep in sync with the Blinc workspace
+# `Cargo.toml` to avoid version-drift between Blinc internals and
+# consumers when both end up in the same dep graph.
+wgpu = "=26.0.1"
+bytemuck = { version = "1.14", features = ["derive"] }
+image = { version = "0.25", default-features = false, features = ["png", "hdr"] }
+
+# Cross-target monotonic clock. `std::time::Instant` panics on
+# `wasm32-unknown-unknown`; `web_time::Instant` is a zero-cost re-export of
+# `std::time::Instant` on native and wraps `performance.now()` on the web,
+# so `sketch::Sketch` gets wall-clock `t`/`dt` on every target.
+web-time = "1.1"
