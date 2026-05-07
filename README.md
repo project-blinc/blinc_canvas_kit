@@ -1,10 +1,5 @@
 # blinc_canvas_kit
 
-> **Part of the [Blinc UI Framework](https://project-blinc.github.io/Blinc)**
->
-> This crate is a component of Blinc, a GPU-accelerated UI framework for Rust.
-> For full documentation and guides, visit the [Blinc documentation](https://project-blinc.github.io/Blinc).
-
 Interactive canvas toolkit for 2D editors, 3D scene viewers, and node graphs — pan, zoom, spatial indexing, multi-select, PBR mesh rendering, orbit camera, and more.
 
 ## Overview
