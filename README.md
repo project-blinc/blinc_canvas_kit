@@ -19,6 +19,14 @@ Everything needed to build interactive infinite canvas applications:
 - **Viewport Culling**: Skip rendering off-screen elements
 - **Hit Regions**: Register interactive bounding boxes with click/hover/drag callbacks
 
+
+
+https://github.com/user-attachments/assets/1d9117d3-bfc1-4041-8930-3d033b8d3deb
+
+
+
+
+
 ### SceneKit3D — 3D scene viewer (mini Three.js)
 
 A Three.js-inspired API for 3D mesh rendering within Blinc's canvas element:
@@ -32,6 +40,9 @@ A Three.js-inspired API for 3D mesh rendering within Blinc's canvas element:
 - **Geometry Primitives**: `Geometry::cube`, `sphere`, `plane`, `cylinder`, `torus` with normals + UVs
 - **Material Builder**: `MaterialBuilder::standard().color(c).metallic(m).roughness(r)`
 - **Scene Management**: `kit.add(geometry, material) → MeshHandle`, transform updates, auto-rendering
+
+
+
 
 ## Quick Start — 2D Canvas
 
