@@ -42,6 +42,7 @@ A Three.js-inspired API for 3D mesh rendering within Blinc's canvas element:
 - **Scene Management**: `kit.add(geometry, material) → MeshHandle`, transform updates, auto-rendering
 
 
+<img width="320" height="240" alt="Screen Recording 2026-04-12 at 02 58 17 (1)" src="https://github.com/user-attachments/assets/7129d536-f4ab-4a87-a16b-e7d0e23364fa" />
 
 
 ## Quick Start — 2D Canvas
