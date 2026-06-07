@@ -807,6 +807,16 @@ impl CanvasKit {
         self.viewport.signal_id()
     }
 
+    /// Latest screen-space dimensions of the canvas element, captured
+    /// during the most recent draw. Returns `(0.0, 0.0)` before the
+    /// first frame.
+    ///
+    /// Useful for hosts that compute fit-to-viewport / focus-on-region
+    /// affordances and need the screen size to centre + zoom.
+    pub fn screen_bounds(&self) -> (f32, f32) {
+        self.screen_bounds.get()
+    }
+
     /// Convert screen-space point to content-space.
     pub fn screen_to_content(&self, screen: Point) -> Point {
         self.viewport.get().screen_to_content(screen)

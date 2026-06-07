@@ -57,34 +57,47 @@ pub struct ZoomAdaptive {
 // ── Constructors & Builders ─────────────────────────────────────────────
 
 impl CanvasBackground {
-    /// Dot grid with defaults: spacing=50, light gray, size=2.
-    pub fn dots() -> Self {
+    /// Dot grid. `color` controls the dot tint — pass a theme
+    /// token (e.g. `ThemeState::get().color(ColorToken::Border)`)
+    /// so the workspace pattern re-tints when bundles / schemes
+    /// swap. Defaults: spacing=50, size=2.
+    pub fn dots(color: Color) -> Self {
         Self::Dots(PatternConfig {
             spacing: 50.0,
-            color: Color::rgba(0.25, 0.25, 0.3, 0.5),
+            color,
             size: 2.0,
             zoom_adaptive: None,
         })
     }
 
-    /// Line grid with defaults: spacing=50, light gray, size=1.
-    pub fn grid() -> Self {
+    /// Line grid. `color` is the line tint. Defaults: spacing=50,
+    /// size=1.
+    pub fn grid(color: Color) -> Self {
         Self::Grid(PatternConfig {
             spacing: 50.0,
-            color: Color::rgba(0.25, 0.25, 0.3, 0.3),
+            color,
             size: 1.0,
             zoom_adaptive: None,
         })
     }
 
-    /// Crosshatch with defaults: spacing=40, light gray, size=1.
-    pub fn crosshatch() -> Self {
+    /// Crosshatch pattern. `color` is the line tint. Defaults:
+    /// spacing=40, size=1.
+    pub fn crosshatch(color: Color) -> Self {
         Self::Crosshatch(PatternConfig {
             spacing: 40.0,
-            color: Color::rgba(0.25, 0.25, 0.3, 0.25),
+            color,
             size: 1.0,
             zoom_adaptive: None,
         })
+    }
+
+    /// Legacy preset for dots — `Border`-ish gray fallback for
+    /// callers that don't have theme-aware code yet. Prefer
+    /// `dots(color)` with a theme-resolved colour for new code.
+    #[deprecated(note = "pass a colour explicitly via `dots(color)` — typically theme-token-derived")]
+    pub fn dots_default() -> Self {
+        Self::dots(Color::rgba(0.25, 0.25, 0.3, 0.5))
     }
 
     /// Customize spacing.
