@@ -54,7 +54,21 @@ pub use blinc_layout::event_handler::EventContext;
 
 pub use background::{CanvasBackground, PatternConfig, ZoomAdaptive};
 pub use geometry::Geometry;
-pub use hit::{CanvasDragEvent, CanvasEvent, HitRegion, InteractionState};
+pub use hit::{CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState};
+
+/// Snapshot keyboard modifiers from an [`EventContext`] into the
+/// kit's [`CanvasModifiers`] shape. Centralised so every event
+/// construction site stays in sync if the underlying field set
+/// gains an entry.
+#[inline]
+fn modifiers_from_evt(evt: &EventContext) -> CanvasModifiers {
+    CanvasModifiers {
+        shift: evt.shift,
+        ctrl: evt.ctrl,
+        alt: evt.alt,
+        meta: evt.meta,
+    }
+}
 pub use loading::{fit_aabb, AutoFramer};
 pub use material::MaterialBuilder;
 pub use painter::Painter2D;
@@ -71,7 +85,7 @@ pub use zoom::ZoomController;
 pub mod prelude {
     pub use crate::background::{CanvasBackground, PatternConfig, ZoomAdaptive};
     pub use crate::geometry::Geometry;
-    pub use crate::hit::{CanvasDragEvent, CanvasEvent, HitRegion, InteractionState};
+    pub use crate::hit::{CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState};
     pub use crate::material::MaterialBuilder;
     pub use crate::painter::Painter2D;
     pub use crate::pan::PanController;
@@ -405,6 +419,7 @@ impl CanvasKit {
                             content_point: content_pt,
                             screen_point: screen_pt,
                             region_id: ia.hovered.clone(),
+                            modifiers: modifiers_from_evt(evt),
                         });
                     }
                 }
@@ -532,6 +547,7 @@ impl CanvasKit {
                     content_point: content_pt,
                     screen_point: screen_pt,
                     region_id: ia.active.clone(),
+                    modifiers: modifiers_from_evt(evt),
                 });
             }
 
@@ -598,6 +614,7 @@ impl CanvasKit {
             };
 
             if let Some(ref cb) = self.on_drag_cb {
+                let mods = modifiers_from_evt(evt);
                 // Fire callback for each selected element with the same delta
                 for selected_id in &sel.selected {
                     cb(&CanvasDragEvent {
@@ -605,6 +622,7 @@ impl CanvasKit {
                         content_delta: delta,
                         screen_point: screen_pt,
                         region_id: selected_id.clone(),
+                        modifiers: mods,
                     });
                 }
                 // If the active element isn't in the selection (edge case),
@@ -616,6 +634,7 @@ impl CanvasKit {
                             content_delta: delta,
                             screen_point: screen_pt,
                             region_id: active_id.clone(),
+                            modifiers: mods,
                         });
                     }
                 }
@@ -673,6 +692,7 @@ impl CanvasKit {
                     content_point: content_pt,
                     screen_point: screen_pt,
                     region_id: ia.active.clone(),
+                    modifiers: modifiers_from_evt(evt),
                 });
             }
             self.interaction.set(InteractionState {

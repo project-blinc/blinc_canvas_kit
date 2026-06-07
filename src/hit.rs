@@ -32,6 +32,20 @@ pub struct InteractionState {
     pub did_drag: bool,
 }
 
+/// Keyboard modifier state captured at the moment an input event
+/// reaches the kit. Forwarded through [`CanvasEvent`] /
+/// [`CanvasDragEvent`] so handlers can switch behaviour on
+/// Shift-drag / Cmd-click without subscribing to a separate
+/// key-tracking channel.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CanvasModifiers {
+    pub shift: bool,
+    pub ctrl: bool,
+    pub alt: bool,
+    /// Cmd on macOS, Win on Windows.
+    pub meta: bool,
+}
+
 /// Event passed to click and hover callbacks.
 #[derive(Clone, Debug)]
 pub struct CanvasEvent {
@@ -41,6 +55,8 @@ pub struct CanvasEvent {
     pub screen_point: Point,
     /// Hit region ID, or `None` if the pointer is over the background.
     pub region_id: Option<String>,
+    /// Modifier-key state at the moment of the event.
+    pub modifiers: CanvasModifiers,
 }
 
 /// Event passed to element drag callbacks.
@@ -54,6 +70,8 @@ pub struct CanvasDragEvent {
     pub screen_point: Point,
     /// The region being dragged.
     pub region_id: String,
+    /// Modifier-key state at the moment of the event.
+    pub modifiers: CanvasModifiers,
 }
 
 /// Hit-test a point against regions in reverse order (topmost first).
