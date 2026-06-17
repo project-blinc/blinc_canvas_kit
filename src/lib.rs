@@ -27,6 +27,7 @@ pub mod background;
 pub mod geometry;
 pub mod grid_pass;
 pub mod hit;
+pub mod input;
 pub mod loading;
 pub mod material;
 pub mod math;
@@ -55,6 +56,10 @@ pub use blinc_layout::event_handler::EventContext;
 pub use background::{CanvasBackground, PatternConfig, ZoomAdaptive};
 pub use geometry::Geometry;
 pub use hit::{CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState};
+pub use input::{
+    ActionMap, AxisBinding, Binding, DivInputExt, GamepadAxis, GamepadButton,
+    GamepadSnapshot, InputState, MouseButton,
+};
 
 /// Snapshot keyboard modifiers from an [`EventContext`] into the
 /// kit's [`CanvasModifiers`] shape. Centralised so every event
@@ -86,6 +91,10 @@ pub mod prelude {
     pub use crate::background::{CanvasBackground, PatternConfig, ZoomAdaptive};
     pub use crate::geometry::Geometry;
     pub use crate::hit::{CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState};
+    pub use crate::input::{
+        ActionMap, AxisBinding, Binding, DivInputExt, GamepadAxis, GamepadButton,
+        GamepadSnapshot, InputState, MouseButton,
+    };
     pub use crate::material::MaterialBuilder;
     pub use crate::painter::Painter2D;
     pub use crate::pan::PanController;
@@ -106,7 +115,7 @@ type SelectionCallback = Arc<dyn Fn(&SelectionChangeEvent) + Send + Sync>;
 /// `CanvasKit::handle_event`, in addition to whatever CanvasKit's own
 /// pan / zoom / selection / hit-testing does with it. Used to bridge
 /// the canvas-bounded event stream into polling input layers (e.g.
-/// `blinc_input::InputState`) without the caller having to attach
+/// `crate::input::InputState`) without the caller having to attach
 /// handlers to a `Div` directly.
 type AnyEventCallback = Arc<dyn Fn(&EventContext) + Send + Sync>;
 
@@ -321,7 +330,7 @@ impl CanvasKit {
     /// Every event `CanvasKit::handle_event` receives — pointer down /
     /// up / move, drag / drag-end, scroll, pinch — is also forwarded to
     /// every subscriber registered here. Use this to bridge canvas
-    /// input into a polling layer like `blinc_input::InputState`
+    /// input into a polling layer like `crate::input::InputState`
     /// without having to attach `Div` handlers yourself: CanvasKit is
     /// already scoped to the canvas's bounds, so subscribers see only
     /// events the user directed at the canvas.

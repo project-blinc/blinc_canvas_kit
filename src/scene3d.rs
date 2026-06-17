@@ -375,7 +375,7 @@ pub struct SceneKit3D {
     /// they do today — the kit doesn't route it through a new
     /// context type, it only fixes the two error-prone wiring
     /// calls. Default `None` preserves pre-existing behavior.
-    input: Option<blinc_input::InputState>,
+    input: Option<crate::input::InputState>,
 }
 
 impl SceneKit3D {
@@ -473,7 +473,7 @@ impl SceneKit3D {
         self
     }
 
-    /// Wire a [`blinc_input::InputState`] to the viewport the kit's
+    /// Wire a [`crate::input::InputState`] to the viewport the kit's
     /// [`Self::element`] returns. Stores a clone (cheap — `InputState`
     /// is `Arc<Mutex<...>>`-backed), and automates:
     ///
@@ -513,7 +513,7 @@ impl SceneKit3D {
     ///
     /// No-op when the caller doesn't need polling input — `element()`
     /// stays identical for kits that weren't `.with_input`-configured.
-    pub fn with_input(mut self, input: &blinc_input::InputState) -> Self {
+    pub fn with_input(mut self, input: &crate::input::InputState) -> Self {
         self.input = Some(input.clone());
         self
     }
@@ -757,7 +757,7 @@ impl SceneKit3D {
         // input — otherwise `outer` is returned verbatim and the
         // 6 event handlers the kit already registered above (drag
         // / scroll / pointer_down) remain untouched.
-        use blinc_input::DivInputExt;
+        use crate::input::DivInputExt;
         match input_capture {
             Some(ref i) => outer.capture_input(i),
             None => outer,

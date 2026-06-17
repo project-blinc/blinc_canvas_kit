@@ -37,12 +37,6 @@ blinc_core = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9
 blinc_layout = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
 blinc_gpu = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
 
-# Downstream input polling layer. Used by `SceneKit3D::with_input` to
-# automate the `capture_input` + per-frame `frame_end` wiring that
-# every 3D demo reimplements. Same workspace-`[patch]` pattern as the
-# Blinc internals above.
-blinc_input = { git = "https://github.com/project-blinc/blinc_input.git", rev = "10c4cb43880564155aa9a39cf858cd5bc6b9ad6b" }
-
 # Versions inlined (no workspace inheritance — this crate isn't a
 # Blinc workspace member). Keep in sync with the Blinc workspace
 # `Cargo.toml` to avoid version-drift between Blinc internals and
@@ -56,3 +50,32 @@ image = { version = "0.25", default-features = false, features = ["png", "hdr"] 
 # `std::time::Instant` on native and wraps `performance.now()` on the web,
 # so `sketch::Sketch` gets wall-clock `t`/`dt` on every target.
 web-time = "1.1"
+
+# Diagnostic logging from the `input` module's callback wiring +
+# (when gamepad feature is on) gilrs polling errors.
+tracing = "0.1"
+
+# Optional gamepad support — used by the `input` module to expose
+# polled gamepad state alongside the keyboard / mouse channel.
+# Desktop uses gilrs; wasm uses the browser's Web Gamepad API via
+# web-sys. Pure keyboard / mouse consumers don't pay for the HID
+# stack unless they opt into the `gamepad` feature.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+gilrs = { version = "0.11", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3", optional = true, features = [
+    "Gamepad",
+    "GamepadButton",
+    "Navigator",
+    "Window",
+] }
+js-sys = { version = "0.3", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[features]
+default = []
+# Enable the gamepad API on the absorbed `input::InputState`
+# (gamepad_count, is_gamepad_button_down, gamepad_axis, ...). Pulls
+# in gilrs on desktop and the Web Gamepad bindings on wasm.
+gamepad = ["dep:gilrs", "dep:web-sys", "dep:js-sys", "dep:wasm-bindgen"]

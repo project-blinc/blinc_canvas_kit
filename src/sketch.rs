@@ -344,12 +344,12 @@ pub trait Player: Send + 'static {
 /// Intended for use on the `Div` returned by [`sketch`], or any `Div`
 /// wrapping a canvas element. It bundles what would otherwise be six
 /// separate `on_event` / `on_key_*` / `on_scroll` calls so downstream
-/// code (e.g. `blinc_input::InputState::record`) can subscribe to the
+/// code (e.g. `crate::input::InputState::record`) can subscribe to the
 /// whole input stream in one line:
 ///
 /// ```ignore
 /// use blinc_canvas_kit::sketch::{sketch, SketchEvents};
-/// use blinc_input::InputState;
+/// use crate::input::InputState;
 ///
 /// let input = InputState::new();
 /// let i = input.clone();
