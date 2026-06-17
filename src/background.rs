@@ -431,7 +431,7 @@ mod tests {
 
     #[test]
     fn test_builder_chaining() {
-        let bg = CanvasBackground::dots()
+        let bg = CanvasBackground::dots(Color::rgba(0.5, 0.5, 0.5, 0.5))
             .with_spacing(30.0)
             .with_color(Color::rgba(1.0, 0.0, 0.0, 1.0))
             .with_size(4.0)
