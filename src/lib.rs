@@ -128,6 +128,13 @@ pub struct CanvasKit {
     interaction: State<InteractionState>,
     selection: State<SelectionState>,
     tool: State<CanvasTool>,
+    /// When true, the next pointer-down (regardless of hit-region or
+    /// current tool) routes to the pan branch. Held by hosts that want
+    /// design-tool norms — spacebar-while-held pans regardless of
+    /// tool, custom UI buttons toggle "pan mode," etc. Middle-click
+    /// pan is handled internally via `mouse_button == 1` and doesn't
+    /// require flipping this flag.
+    force_pan: State<bool>,
     screen_bounds: State<(f32, f32)>,
     snap: SnapController,
     background: CanvasBackground,
@@ -135,6 +142,16 @@ pub struct CanvasKit {
     on_hover_cb: Option<EventCallback>,
     on_drag_cb: Option<DragCallback>,
     on_drag_end_cb: Option<EventCallback>,
+    /// Additive click listeners. Fired alongside `on_click_cb` on
+    /// every click. Multiple subscribers can register without
+    /// clobbering each other — required when more than one
+    /// downstream (the node-editor's selection handler plus the
+    /// portal-ui's per-frame click stamper, for instance) needs to
+    /// observe clicks routed through the kit. `on_element_click`
+    /// keeps its "set / replace" contract for single-owner use
+    /// cases; reach for `add_click_listener` whenever a sibling
+    /// crate ALSO wants to see clicks.
+    click_listeners: Vec<EventCallback>,
     on_selection_change_cb: Option<SelectionCallback>,
     /// Subscribers forwarded every raw `EventContext` CanvasKit sees —
     /// see [`CanvasKit::on_any_event`].
@@ -153,6 +170,7 @@ impl CanvasKit {
             interaction: ctx.use_state_keyed(&format!("{key}_ia"), InteractionState::default),
             selection: ctx.use_state_keyed(&format!("{key}_sel"), SelectionState::new),
             tool: ctx.use_state_keyed(&format!("{key}_tool"), CanvasTool::default),
+            force_pan: ctx.use_state_keyed(&format!("{key}_force_pan"), || false),
             screen_bounds: ctx.use_state_keyed(&format!("{key}_sb"), || (0.0, 0.0)),
             snap: SnapController::disabled(),
             background: CanvasBackground::None,
@@ -160,6 +178,7 @@ impl CanvasKit {
             on_hover_cb: None,
             on_drag_cb: None,
             on_drag_end_cb: None,
+            click_listeners: Vec::new(),
             on_selection_change_cb: None,
             any_event_cbs: Vec::new(),
         }
@@ -204,6 +223,22 @@ impl CanvasKit {
         self.tool.get()
     }
 
+    /// Force the next pointer-down + drag into pan mode regardless of
+    /// the current tool / hit region. Hosts use this to wire
+    /// design-tool norms — hold spacebar to pan, click a custom
+    /// "pan" UI button, etc. Set to `true` when the trigger engages
+    /// (key down, button press); set back to `false` on release.
+    /// Middle-click pan is handled internally and doesn't require
+    /// flipping this flag.
+    pub fn set_force_pan(&self, on: bool) {
+        self.force_pan.set(on);
+    }
+
+    /// Whether the canvas is currently in forced-pan mode.
+    pub fn force_pan(&self) -> bool {
+        self.force_pan.get()
+    }
+
     /// Enable snap-to-grid with the given spacing (builder).
     pub fn with_snap(mut self, spacing: f32) -> Self {
         self.snap = SnapController::new(spacing);
@@ -240,9 +275,22 @@ impl CanvasKit {
 
     // ── Callback Builders ────────────────────────────────────────────
 
-    /// Set callback for clicks on hit regions.
+    /// Set callback for clicks on hit regions. Replaces any
+    /// previous callback set via this method — single-owner.
+    /// Use [`Self::add_click_listener`] when more than one downstream
+    /// crate needs to observe clicks (e.g. node-editor's selection
+    /// logic AND portal-ui's immediate-mode click stamper).
     pub fn on_element_click(&mut self, cb: impl Fn(&CanvasEvent) + Send + Sync + 'static) {
         self.on_click_cb = Some(Arc::new(cb));
+    }
+
+    /// Add an additive click listener. Fired alongside the single
+    /// callback set via [`Self::on_element_click`] on every click,
+    /// in registration order. Calling this multiple times appends
+    /// rather than replacing — safe to use from sibling crates that
+    /// each need their own subscription.
+    pub fn add_click_listener(&mut self, cb: impl Fn(&CanvasEvent) + Send + Sync + 'static) {
+        self.click_listeners.push(Arc::new(cb));
     }
 
     /// Set callback for hover changes (region enter/leave).
@@ -329,6 +377,57 @@ impl CanvasKit {
     /// Clear the selection.
     pub fn clear_selection(&self) {
         self.set_selection(HashSet::new());
+    }
+
+    /// Add a single region id to the current selection. Idempotent —
+    /// no-op (no signal bump) when the id is already selected. Cheaper
+    /// than `set_selection(...)` for incremental adds: only writes the
+    /// selection cell when the set actually grows, avoiding the
+    /// clone-mutate-replace round-trip a host would otherwise need.
+    pub fn add_selection(&self, id: impl Into<String>) {
+        let id = id.into();
+        let current = self.selection.get();
+        if current.selected.contains(&id) {
+            return;
+        }
+        let mut next = current.selected.clone();
+        next.insert(id.clone());
+        self.selection.update(|mut s| {
+            s.selected = next.clone();
+            s
+        });
+        if let Some(ref cb) = self.on_selection_change_cb {
+            let mut added = HashSet::new();
+            added.insert(id);
+            cb(&SelectionChangeEvent {
+                selected: next,
+                added,
+                removed: HashSet::new(),
+            });
+        }
+    }
+
+    /// Remove a single region id from the current selection. Idempotent.
+    pub fn remove_selection(&self, id: &str) {
+        let current = self.selection.get();
+        if !current.selected.contains(id) {
+            return;
+        }
+        let mut next = current.selected.clone();
+        next.remove(id);
+        self.selection.update(|mut s| {
+            s.selected = next.clone();
+            s
+        });
+        if let Some(ref cb) = self.on_selection_change_cb {
+            let mut removed = HashSet::new();
+            removed.insert(id.to_string());
+            cb(&SelectionChangeEvent {
+                selected: next,
+                added: HashSet::new(),
+                removed,
+            });
+        }
     }
 
     /// Check if a region is currently selected.
@@ -462,8 +561,25 @@ impl CanvasKit {
     fn handle_pointer_down(&self, evt: &EventContext, screen_pt: Point) {
         let vp = self.viewport.get();
         let content_pt = vp.screen_to_content(screen_pt);
-        let hit = self.hit_test(content_pt);
         let tool = self.tool.get();
+
+        // Design-tool pan overrides: middle-click ALWAYS pans, and
+        // `force_pan` (typically toggled by a spacebar-held listener
+        // on the host) makes the next drag pan regardless of tool /
+        // hit region. Skip hit-test + selection + marquee so the
+        // drag falls through to the background-pan branch in
+        // `handle_drag`. Selection survives (we don't clear it).
+        if evt.mouse_button == 1 || self.force_pan.get() {
+            self.interaction.set(InteractionState {
+                hovered: self.interaction.get().hovered,
+                active: None,
+                drag_start: Some(content_pt),
+                did_drag: false,
+            });
+            return;
+        }
+
+        let hit = self.hit_test(content_pt);
 
         if let Some(ref region_id) = hit {
             // Clicked on an element — update selection based on modifiers
@@ -539,16 +655,25 @@ impl CanvasKit {
         let sel = self.selection.get();
 
         if ia.active.is_some() && !ia.did_drag {
-            // Click (pointer down + up without drag)
+            // Click (pointer down + up without drag). Build the
+            // event once + dispatch to the single-owner callback
+            // AND every additive listener. Additive listeners fan
+            // out in registration order so a setup with
+            // node-editor's on_element_click + portal-ui's
+            // add_click_listener both see every click.
+            let vp = self.viewport.get();
+            let content_pt = vp.screen_to_content(screen_pt);
+            let canvas_evt = CanvasEvent {
+                content_point: content_pt,
+                screen_point: screen_pt,
+                region_id: ia.active.clone(),
+                modifiers: modifiers_from_evt(evt),
+            };
             if let Some(ref cb) = self.on_click_cb {
-                let vp = self.viewport.get();
-                let content_pt = vp.screen_to_content(screen_pt);
-                cb(&CanvasEvent {
-                    content_point: content_pt,
-                    screen_point: screen_pt,
-                    region_id: ia.active.clone(),
-                    modifiers: modifiers_from_evt(evt),
-                });
+                cb(&canvas_evt);
+            }
+            for listener in &self.click_listeners {
+                listener(&canvas_evt);
             }
 
             // Plain click on already-selected item in multi-selection:
