@@ -33,15 +33,15 @@ crate-type = ["lib"]
 #     blinc_gpu = { path = "crates/blinc_gpu" }
 #
 # The Blinc workspace itself does this in its root Cargo.toml.
-blinc_core = { git = "https://github.com/project-blinc/Blinc.git", rev = "44d08036483be514ee64335aa936ef76e8d48bf2" }
-blinc_layout = { git = "https://github.com/project-blinc/Blinc.git", rev = "44d08036483be514ee64335aa936ef76e8d48bf2" }
-blinc_gpu = { git = "https://github.com/project-blinc/Blinc.git", rev = "44d08036483be514ee64335aa936ef76e8d48bf2" }
+blinc_core = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
+blinc_layout = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
+blinc_gpu = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
 
 # Downstream input polling layer. Used by `SceneKit3D::with_input` to
 # automate the `capture_input` + per-frame `frame_end` wiring that
 # every 3D demo reimplements. Same workspace-`[patch]` pattern as the
 # Blinc internals above.
-blinc_input = { git = "https://github.com/project-blinc/blinc_input.git", rev = "3e94941bd59bafcd23ad59e8db504a44fa85b4f5" }
+blinc_input = { git = "https://github.com/project-blinc/blinc_input.git", rev = "10c4cb43880564155aa9a39cf858cd5bc6b9ad6b" }
 
 # Versions inlined (no workspace inheritance — this crate isn't a
 # Blinc workspace member). Keep in sync with the Blinc workspace
