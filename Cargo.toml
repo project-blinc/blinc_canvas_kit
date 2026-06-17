@@ -33,9 +33,9 @@ crate-type = ["lib"]
 #     blinc_gpu = { path = "crates/blinc_gpu" }
 #
 # The Blinc workspace itself does this in its root Cargo.toml.
-blinc_core = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
-blinc_layout = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
-blinc_gpu = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b80ad21e6abeed3a1eb4b62af1d8ad6a05" }
+blinc_core = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b8e949d40a0012612b5880e89934ef69de" }
+blinc_layout = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b8e949d40a0012612b5880e89934ef69de" }
+blinc_gpu = { git = "https://github.com/project-blinc/Blinc.git", rev = "aa5ed9b8e949d40a0012612b5880e89934ef69de" }
 
 # Versions inlined (no workspace inheritance — this crate isn't a
 # Blinc workspace member). Keep in sync with the Blinc workspace
