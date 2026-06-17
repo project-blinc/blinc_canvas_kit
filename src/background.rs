@@ -95,7 +95,9 @@ impl CanvasBackground {
     /// Legacy preset for dots — `Border`-ish gray fallback for
     /// callers that don't have theme-aware code yet. Prefer
     /// `dots(color)` with a theme-resolved colour for new code.
-    #[deprecated(note = "pass a colour explicitly via `dots(color)` — typically theme-token-derived")]
+    #[deprecated(
+        note = "pass a colour explicitly via `dots(color)` — typically theme-token-derived"
+    )]
     pub fn dots_default() -> Self {
         Self::dots(Color::rgba(0.25, 0.25, 0.3, 0.5))
     }

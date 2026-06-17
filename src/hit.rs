@@ -30,6 +30,14 @@ pub struct InteractionState {
     pub drag_start: Option<Point>,
     /// Whether a DRAG event has fired since POINTER_DOWN (distinguishes click from drag).
     pub did_drag: bool,
+    /// Last known cursor position in content-space. Updated on every
+    /// pointer event (down / move / drag / up); stays at the last
+    /// position when no pointer events are firing (no pointer-leave
+    /// event clears it). `None` until the first pointer event since
+    /// the kit was constructed. Consumers that need a continuous
+    /// "where is the cursor right now" read this; consumers that
+    /// need "where did the drag begin" read [`Self::drag_start`].
+    pub current_content_point: Option<Point>,
 }
 
 /// Keyboard modifier state captured at the moment an input event

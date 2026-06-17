@@ -57,8 +57,8 @@ pub use background::{CanvasBackground, PatternConfig, ZoomAdaptive};
 pub use geometry::Geometry;
 pub use hit::{CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState};
 pub use input::{
-    ActionMap, AxisBinding, Binding, DivInputExt, GamepadAxis, GamepadButton,
-    GamepadSnapshot, InputState, MouseButton,
+    ActionMap, AxisBinding, Binding, DivInputExt, GamepadAxis, GamepadButton, GamepadSnapshot,
+    InputState, MouseButton,
 };
 
 /// Snapshot keyboard modifiers from an [`EventContext`] into the
@@ -90,10 +90,12 @@ pub use zoom::ZoomController;
 pub mod prelude {
     pub use crate::background::{CanvasBackground, PatternConfig, ZoomAdaptive};
     pub use crate::geometry::Geometry;
-    pub use crate::hit::{CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState};
+    pub use crate::hit::{
+        CanvasDragEvent, CanvasEvent, CanvasModifiers, HitRegion, InteractionState,
+    };
     pub use crate::input::{
-        ActionMap, AxisBinding, Binding, DivInputExt, GamepadAxis, GamepadButton,
-        GamepadSnapshot, InputState, MouseButton,
+        ActionMap, AxisBinding, Binding, DivInputExt, GamepadAxis, GamepadButton, GamepadSnapshot,
+        InputState, MouseButton,
     };
     pub use crate::material::MaterialBuilder;
     pub use crate::painter::Painter2D;
@@ -518,6 +520,7 @@ impl CanvasKit {
                 let mut ia = self.interaction.get();
                 let changed = ia.hovered != hit;
                 ia.hovered = hit;
+                ia.current_content_point = Some(content_pt);
                 self.interaction.set(ia);
 
                 if changed {
@@ -584,6 +587,7 @@ impl CanvasKit {
                 active: None,
                 drag_start: Some(content_pt),
                 did_drag: false,
+                current_content_point: Some(content_pt),
             });
             return;
         }
@@ -622,6 +626,7 @@ impl CanvasKit {
                 active: hit,
                 drag_start: Some(content_pt),
                 did_drag: false,
+                current_content_point: Some(content_pt),
             });
         } else {
             // Clicked on background
@@ -655,6 +660,7 @@ impl CanvasKit {
                 active: None,
                 drag_start: Some(content_pt),
                 did_drag: false,
+                current_content_point: Some(content_pt),
             });
         }
     }
@@ -724,12 +730,17 @@ impl CanvasKit {
             }
         }
 
-        // Clear interaction state
+        // Clear interaction state. `current_content_point` carries
+        // forward the last known cursor position — pointer-up doesn't
+        // move the cursor, so the previous value is still valid.
+        let vp = self.viewport.get();
+        let content_pt = vp.screen_to_content(screen_pt);
         self.interaction.set(InteractionState {
             hovered: ia.hovered,
             active: None,
             drag_start: None,
             did_drag: false,
+            current_content_point: Some(content_pt),
         });
     }
 
@@ -780,6 +791,7 @@ impl CanvasKit {
                 active: ia.active,
                 drag_start: Some(content_pt),
                 did_drag: true,
+                current_content_point: Some(content_pt),
             });
         } else if sel.marquee.is_some() {
             // Marquee drag — update current point + live preview
@@ -829,11 +841,17 @@ impl CanvasKit {
                     modifiers: modifiers_from_evt(evt),
                 });
             }
+            // Drag end — keep current_content_point at the release
+            // position so any hover-driven widget reading it after
+            // the drag still gets a usable read.
+            let vp = self.viewport.get();
+            let content_pt = vp.screen_to_content(screen_pt);
             self.interaction.set(InteractionState {
                 hovered: ia.hovered,
                 active: None,
                 drag_start: None,
                 did_drag: false,
+                current_content_point: Some(content_pt),
             });
         } else {
             // Background drag end — momentum (only if not marquee)

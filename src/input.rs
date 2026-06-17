@@ -165,23 +165,23 @@ pub struct GamepadSnapshot {
 /// between "A" and "Cross" per platform.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GamepadButton {
-    South,          // A / Cross / B (Nintendo layout)
-    East,           // B / Circle / A
-    West,           // X / Square / Y
-    North,          // Y / Triangle / X
+    South, // A / Cross / B (Nintendo layout)
+    East,  // B / Circle / A
+    West,  // X / Square / Y
+    North, // Y / Triangle / X
     LeftShoulder,
     RightShoulder,
-    LeftTrigger,    // Digital press — use `GamepadAxis::LeftTrigger` for analog
+    LeftTrigger, // Digital press — use `GamepadAxis::LeftTrigger` for analog
     RightTrigger,
-    Select,         // Back / Share
-    Start,          // Menu / Options
-    LeftThumb,      // L3 — pressing the stick down
-    RightThumb,     // R3
+    Select,     // Back / Share
+    Start,      // Menu / Options
+    LeftThumb,  // L3 — pressing the stick down
+    RightThumb, // R3
     DPadUp,
     DPadDown,
     DPadLeft,
     DPadRight,
-    Mode,           // Xbox / PS home button. Some platforms reserve it.
+    Mode, // Xbox / PS home button. Some platforms reserve it.
 }
 
 /// Normalised gamepad analog axis. Stick axes run `-1.0 ..= 1.0`
@@ -278,10 +278,7 @@ impl ActionMap {
     /// Register a binding for `action`. Actions with multiple
     /// bindings are down iff *any* binding is down.
     pub fn bind_action(&mut self, action: impl Into<String>, binding: Binding) -> &mut Self {
-        self.actions
-            .entry(action.into())
-            .or_default()
-            .push(binding);
+        self.actions.entry(action.into()).or_default().push(binding);
         self
     }
 
@@ -448,7 +445,13 @@ impl InputState {
             .unwrap()
             .gamepads
             .get(gamepad)
-            .and_then(|g| if g.connected { g.axes.get(&axis).copied() } else { None })
+            .and_then(|g| {
+                if g.connected {
+                    g.axes.get(&axis).copied()
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0)
     }
 
@@ -552,8 +555,12 @@ impl InputState {
     pub fn poll_gamepads(&self) {
         use wasm_bindgen::JsCast;
         let mut inner = self.inner.lock().unwrap();
-        let Some(window) = web_sys::window() else { return; };
-        let Ok(pads_js) = window.navigator().get_gamepads() else { return; };
+        let Some(window) = web_sys::window() else {
+            return;
+        };
+        let Ok(pads_js) = window.navigator().get_gamepads() else {
+            return;
+        };
         let pads = js_sys::Array::from(&pads_js);
 
         // Grow snapshot vec to match the browser's slot count. Empty
@@ -590,7 +597,9 @@ impl InputState {
                 else {
                     continue;
                 };
-                let Some(mapped) = map_web_button_index(i) else { continue; };
+                let Some(mapped) = map_web_button_index(i) else {
+                    continue;
+                };
                 let pressed = button.pressed();
                 let was_down = snap.buttons_down.contains(&mapped);
                 if pressed && !was_down {
@@ -625,7 +634,9 @@ impl InputState {
                 GamepadAxis::RightStickY,
             ];
             for (i, a) in axis_map.iter().enumerate() {
-                let Some(v) = axes.get(i as u32).as_f64() else { continue; };
+                let Some(v) = axes.get(i as u32).as_f64() else {
+                    continue;
+                };
                 // Web Y is down-positive; flip so consumers get the
                 // same sign convention as gilrs (up-positive).
                 let signed = if matches!(a, GamepadAxis::LeftStickY | GamepadAxis::RightStickY) {
@@ -811,10 +822,20 @@ fn binding_is_active(b: &Binding, s: &Inner) -> bool {
             .gamepads
             .get(slot)
             .is_some_and(|g| g.connected && g.buttons_down.contains(&button)),
-        Binding::GamepadAxisThreshold { slot, axis, threshold } => s
+        Binding::GamepadAxisThreshold {
+            slot,
+            axis,
+            threshold,
+        } => s
             .gamepads
             .get(slot)
-            .and_then(|g| if g.connected { g.axes.get(&axis).copied() } else { None })
+            .and_then(|g| {
+                if g.connected {
+                    g.axes.get(&axis).copied()
+                } else {
+                    None
+                }
+            })
             .map(|v| v.abs() >= threshold.abs())
             .unwrap_or(false),
     }
@@ -862,14 +883,22 @@ fn axis_value(b: &AxisBinding, s: &Inner) -> f32 {
         AxisBinding::GamepadAxis { slot, axis } => s
             .gamepads
             .get(slot)
-            .and_then(|g| if g.connected { g.axes.get(&axis).copied() } else { None })
+            .and_then(|g| {
+                if g.connected {
+                    g.axes.get(&axis).copied()
+                } else {
+                    None
+                }
+            })
             .unwrap_or(0.0),
         AxisBinding::GamepadButtonPair {
             slot,
             negative,
             positive,
         } => {
-            let Some(g) = s.gamepads.get(slot) else { return 0.0 };
+            let Some(g) = s.gamepads.get(slot) else {
+                return 0.0;
+            };
             if !g.connected {
                 return 0.0;
             }
@@ -920,23 +949,23 @@ fn map_gilrs_button(btn: gilrs::Button) -> Option<GamepadButton> {
 #[cfg(all(feature = "gamepad", target_arch = "wasm32"))]
 fn map_web_button_index(i: u32) -> Option<GamepadButton> {
     Some(match i {
-        0 => GamepadButton::South,          // Cross / A
-        1 => GamepadButton::East,           // Circle / B
-        2 => GamepadButton::West,           // Square / X
-        3 => GamepadButton::North,          // Triangle / Y
-        4 => GamepadButton::LeftShoulder,   // L1 / LB
-        5 => GamepadButton::RightShoulder,  // R1 / RB
-        6 => GamepadButton::LeftTrigger,    // L2 / LT (digital press)
-        7 => GamepadButton::RightTrigger,   // R2 / RT
-        8 => GamepadButton::Select,         // Share / Back
-        9 => GamepadButton::Start,          // Options / Menu
-        10 => GamepadButton::LeftThumb,     // L3 (stick press)
-        11 => GamepadButton::RightThumb,    // R3
+        0 => GamepadButton::South,         // Cross / A
+        1 => GamepadButton::East,          // Circle / B
+        2 => GamepadButton::West,          // Square / X
+        3 => GamepadButton::North,         // Triangle / Y
+        4 => GamepadButton::LeftShoulder,  // L1 / LB
+        5 => GamepadButton::RightShoulder, // R1 / RB
+        6 => GamepadButton::LeftTrigger,   // L2 / LT (digital press)
+        7 => GamepadButton::RightTrigger,  // R2 / RT
+        8 => GamepadButton::Select,        // Share / Back
+        9 => GamepadButton::Start,         // Options / Menu
+        10 => GamepadButton::LeftThumb,    // L3 (stick press)
+        11 => GamepadButton::RightThumb,   // R3
         12 => GamepadButton::DPadUp,
         13 => GamepadButton::DPadDown,
         14 => GamepadButton::DPadLeft,
         15 => GamepadButton::DPadRight,
-        16 => GamepadButton::Mode,          // PS button / Xbox home
+        16 => GamepadButton::Mode, // PS button / Xbox home
         _ => return None,
     })
 }
