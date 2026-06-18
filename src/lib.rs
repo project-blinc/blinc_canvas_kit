@@ -84,7 +84,7 @@ pub use sketch::{sketch, Player, Sketch, SketchContext, SketchEvents};
 pub use snap::SnapController;
 pub use spatial::SpatialIndex;
 pub use viewport::{affine_inverse, CanvasViewport};
-pub use zoom::ZoomController;
+pub use zoom::{ZoomAnchor, ZoomController};
 
 /// Prelude for convenient imports.
 pub mod prelude {
@@ -106,7 +106,7 @@ pub mod prelude {
     pub use crate::snap::SnapController;
     pub use crate::spatial::SpatialIndex;
     pub use crate::viewport::{affine_inverse, CanvasViewport};
-    pub use crate::zoom::ZoomController;
+    pub use crate::zoom::{ZoomAnchor, ZoomController};
     pub use crate::CanvasKit;
 }
 
@@ -549,15 +549,41 @@ impl CanvasKit {
             }
 
             event_types::SCROLL => {
-                let cursor = screen_pt;
+                // Anchor resolution: Cursor uses screen_pt
+                // (canvas-local coords from `evt.local_x/y`); the
+                // ViewportCenter anchor uses the centre of the
+                // canvas element's bounds stored by the canvas
+                // closure on every draw at lib.rs ~933. We read
+                // from `screen_bounds` (not `evt.bounds_*`)
+                // because the scroll dispatch path constructs an
+                // EventContext that only sets mouse_pos +
+                // scroll_delta — bounds_* are zero, which would
+                // snap the anchor to the top-left corner.
                 let zc = self.zoom_controller.clone();
+                let anchor = match zc.anchor {
+                    crate::zoom::ZoomAnchor::Cursor => screen_pt,
+                    crate::zoom::ZoomAnchor::ViewportCenter => {
+                        let (w, h) = self.screen_bounds.get();
+                        if w > 0.0 && h > 0.0 {
+                            Point::new(w * 0.5, h * 0.5)
+                        } else {
+                            // Pre-first-paint fallback (closure
+                            // hasn't recorded screen_bounds yet).
+                            screen_pt
+                        }
+                    }
+                };
                 self.viewport.update(|mut vp| {
-                    zc.on_scroll(&mut vp, evt.scroll_delta_y, cursor);
+                    zc.on_scroll(&mut vp, evt.scroll_delta_y, anchor);
                     vp
                 });
             }
 
             event_types::PINCH => {
+                // Pinch always anchors at the user-supplied pinch
+                // center — that's what makes a pinch feel correct.
+                // ZoomAnchor::ViewportCenter would override real
+                // physical input intent, so this path ignores it.
                 let center = Point::new(evt.pinch_center_x, evt.pinch_center_y);
                 let zc = self.zoom_controller.clone();
                 self.viewport.update(|mut vp| {

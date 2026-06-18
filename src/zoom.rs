@@ -2,6 +2,32 @@ use blinc_core::layer::Point;
 
 use crate::viewport::CanvasViewport;
 
+/// Which screen-space point to anchor a zoom step against.
+///
+/// "Anchor" = the point that stays fixed in CONTENT space as the
+/// viewport rescales. Picking the cursor (image-editor convention)
+/// pulls content toward the pointer; picking the viewport centre
+/// (UI / vector editor convention) keeps the centred work pinned
+/// while the surrounding content scales away symmetrically.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ZoomAnchor {
+    /// Anchor at the mouse cursor's screen position. Content under
+    /// the cursor stays put; works well when the user is zooming
+    /// at a specific feature.
+    Cursor,
+    /// Anchor at the canvas's viewport centre. Content centred in
+    /// the canvas stays put; left/right edges scale symmetrically.
+    /// Better default for design-canvas apps (UI / vector editors)
+    /// where the user is typically working on whatever's centred.
+    ViewportCenter,
+}
+
+impl Default for ZoomAnchor {
+    fn default() -> Self {
+        ZoomAnchor::ViewportCenter
+    }
+}
+
 /// Zoom controller that processes scroll and pinch events.
 #[derive(Clone, Debug)]
 pub struct ZoomController {
@@ -9,6 +35,11 @@ pub struct ZoomController {
     pub scroll_sensitivity: f32,
     /// Zoom speed multiplier for pinch gestures
     pub pinch_sensitivity: f32,
+    /// Where in screen space the zoom step is anchored. Defaults
+    /// to [`ZoomAnchor::ViewportCenter`]. The canvas-kit event
+    /// router consults this when resolving the anchor for each
+    /// wheel/pinch event.
+    pub anchor: ZoomAnchor,
 }
 
 impl Default for ZoomController {
@@ -22,6 +53,7 @@ impl ZoomController {
         Self {
             scroll_sensitivity: 0.001,
             pinch_sensitivity: 1.0,
+            anchor: ZoomAnchor::default(),
         }
     }
 
@@ -34,6 +66,13 @@ impl ZoomController {
     /// Configure pinch sensitivity (default 1.0).
     pub fn with_pinch_sensitivity(mut self, sensitivity: f32) -> Self {
         self.pinch_sensitivity = sensitivity;
+        self
+    }
+
+    /// Configure the zoom anchor (default
+    /// [`ZoomAnchor::ViewportCenter`]).
+    pub fn with_anchor(mut self, anchor: ZoomAnchor) -> Self {
+        self.anchor = anchor;
         self
     }
 
